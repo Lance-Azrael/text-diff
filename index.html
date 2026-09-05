@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Text Diff · GitHub Style</title>
+<style>
+:root{
+  --bg:#f6f8fa; --panel:#ffffff; --fg:#1f2328; --muted:#656d76; --border:#d0d7de;
+  --blue:#0969da; --blue2:#218bff;
+  --del-bg:#ffebe9; --del-strong:#ff818266; --del-fg:#cf222e;
+  --add-bg:#dafbe1; --add-strong:#2da44e66; --add-fg:#116329;
+  --hunk:#ddf4ff; --hunk-fg:#0969da;
+  --num:#f6f8fa; --hover:#f3f4f6;
+}
+@media (prefers-color-scheme:dark){
+:root{
+  --bg:#0d1117; --panel:#0d1117; --fg:#e6edf3; --muted:#848d97; --border:#30363d;
+  --blue:#4493f8; --blue2:#2f81f7;
+  --del-bg:#3f1518; --del-strong:#ff7b7255; --del-fg:#ff7b72;
+  --add-bg:#12261e; --add-strong:#3fb95055; --add-fg:#3fb950;
+  --hunk:#132f4c; --hunk-fg:#79c0ff;
+  --num:#161b22; --hover:#161b22;
+}}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--fg)}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+}
+.app{max-width:1500px;margin:0 auto;padding:14px}
+.top{display:flex;align-items:flex-start;gap:12px;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px}
+.title{font-size:22px;font-weight:700;margin:0 0 4px}
+.subtitle{font-size:13px;color:var(--muted);line-height:1.45}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button,select{
+  min-height:38px;border:1px solid var(--border);background:var(--panel);color:var(--fg);
+  border-radius:6px;padding:7px 11px;font:inherit
+}
+button.primary{background:var(--blue2);border-color:var(--blue2);color:#fff;font-weight:600}
+button:active{transform:translateY(1px)}
+label.opt{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
+.inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.box{border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
+.boxhead{display:flex;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600}
+.count{color:var(--muted);font-weight:400}
+textarea{
+  display:block;width:100%;min-height:28vh;border:0;outline:0;resize:vertical;background:var(--panel);color:var(--fg);
+  padding:10px 12px;font:14px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono","PingFang SC",monospace;
+  tab-size:4;
+}
+.panel{border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
+.panelhead{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--border);font-size:13px}
+.stats{color:var(--muted)}
+.legend{display:flex;gap:10px;color:var(--muted);font-size:12px;flex-wrap:wrap}
+.legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:0}
+.legend .ld::before{background:var(--del-bg);border:1px solid var(--del-fg)}
+.legend .la::before{background:var(--add-bg);border:1px solid var(--add-fg)}
+.diff{overflow:auto}
+table{border-collapse:collapse;width:100%;table-layout:fixed;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono","PingFang SC",monospace}
+td{padding:0;vertical-align:top}
+td.ln{
+  width:48px;min-width:48px;text-align:right;padding:1px 8px;color:var(--muted);
+  background:var(--num);border-right:1px solid var(--border);user-select:none
+}
+td.code{padding:1px 10px;white-space:pre-wrap;overflow-wrap:anywhere}
+tr.del td.code{background:var(--del-bg)}
+tr.add td.code{background:var(--add-bg)}
+tr.del td.sign{background:var(--del-bg);color:var(--del-fg)}
+tr.add td.sign{background:var(--add-bg);color:var(--add-fg)}
+td.sign{width:26px;min-width:26px;text-align:center;user-select:none}
+tr.ctx:hover td.code{background:var(--hover)}
+span.idel{background:var(--del-strong);border-radius:2px}
+span.iadd{background:var(--add-strong);border-radius:2px}
+tr.hunk td{background:var(--hunk);color:var(--hunk-fg);padding:4px 10px;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.mobiletabs{display:none;gap:6px;padding:8px;border-bottom:1px solid var(--border)}
+.mobiletabs button.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.side{display:grid;grid-template-columns:48px 26px 1fr 48px 26px 1fr}
+.side .cell{padding:1px 10px;white-space:pre-wrap;overflow-wrap:anywhere;min-height:22px}
+.side .ln,.side .sign{background:var(--num)}
+.side .ln{text-align:right;padding:1px 8px;color:var(--muted);border-right:1px solid var(--border);user-select:none}
+.side .sign{text-align:center;user-select:none}
+.side .leftcode{border-right:1px solid var(--border)}
+.side .delbg{background:var(--del-bg)}
+.side .addbg{background:var(--add-bg)}
+.side .ctxbg:hover{background:var(--hover)}
+.side .hunkbar{grid-column:1/-1;background:var(--hunk);color:var(--hunk-fg);padding:4px 10px;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.note{font-size:12px;color:var(--muted);padding:8px 10px;border-top:1px solid var(--border)}
+@media(max-width:850px){
+  .app{padding:8px}
+  .inputs{grid-template-columns:1fr}
+  textarea{min-height:22vh}
+  .legend{display:none}
+  td.ln{width:38px;min-width:38px;padding-right:5px}
+  td.sign{width:22px;min-width:22px}
+  td.code{padding-left:7px;padding-right:7px}
+  .side{grid-template-columns:38px 22px minmax(260px,1fr) 38px 22px minmax(260px,1fr);min-width:780px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div>
+      <div class="title">Text Diff · GitHub Style</div>
+      <div class="subtitle">按行做 Myers diff，再对“删除行 ↔ 新增行”做行内词/字符高亮。纯前端，本页不会上传你的文字。</div>
+    </div>
+    <div class="toolbar">
+      <button class="primary" id="compare">比较</button>
+      <button id="swap">左右互换</button>
+      <button id="example">示例</button>
+      <button id="clear">清空</button>
+      <select id="view">
+        <option value="unified" selected>Unified</option>
+        <option value="split">Split</option>
+      </select>
+      <label class="opt"><input id="ignorews" type="checkbox">忽略空白差异</label>
+    </div>
+  </div>
+
+  <div class="inputs">
+    <div class="box">
+      <div class="boxhead"><span>旧版</span><span class="count" id="lc">0 行 · 0 字</span></div>
+      <textarea id="a" spellcheck="false" placeholder="从备忘录复制旧版文字，粘贴到这里"></textarea>
+    </div>
+    <div class="box">
+      <div class="boxhead"><span>新版</span><span class="count" id="rc">0 行 · 0 字</span></div>
+      <textarea id="b" spellcheck="false" placeholder="从备忘录复制新版文字，粘贴到这里"></textarea>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panelhead">
+      <div class="stats" id="stats">尚未比较</div>
+      <div class="legend"><span class="ld">删除</span><span class="la">新增</span></div>
+    </div>
+    <div class="diff" id="out"><div class="empty">粘贴两版文字后点“比较”。</div></div>
+    <div class="note">提示：这版故意采用 Git/GitHub 风格的“按行比较”。如果备忘录里一整段只有一个物理换行，它会把整段当作一行。</div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const A = $('#a'), B = $('#b'), OUT = $('#out'), STATS = $('#stats');
+
+  const esc = s => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const normNL = s => s.replace(/\r\n?/g, '\n');
+  const lines = s => normNL(s).split('\n');
+
+  function count(el, target){
+    const s = normNL(el.value);
+    $(target).textContent = `${s ? s.split('\n').length : 0} 行 · ${s.length.toLocaleString()} 字`;
+  }
+  A.addEventListener('input',()=>count(A,'#lc'));
+  B.addEventListener('input',()=>count(B,'#rc'));
+
+  function key(s){
+    if(!$('#ignorews').checked) return s;
+    return s.replace(/\s+/g,' ').trim();
+  }
+
+  // Myers shortest-edit-script diff, line based.
+  function myers(a,b, keyFn=x=>x){
+    const N=a.length,M=b.length,max=N+M,off=max+1;
+    let v=new Int32Array(2*max+3); v.fill(-1); v[off+1]=0;
+    const trace=[];
+    for(let d=0;d<=max;d++){
+      trace.push(v.slice());
+      for(let k=-d;k<=d;k+=2){
+        const idx=off+k;
+        let x;
+        if(k===-d || (k!==d && v[idx-1] < v[idx+1])) x=v[idx+1];
+        else x=v[idx-1]+1;
+        let y=x-k;
+        while(x<N && y<M && keyFn(a[x])===keyFn(b[y])){x++;y++}
+        v[idx]=x;
+        if(x>=N && y>=M) return backtrack(trace,a,b,d,off);
+      }
+    }
+    return [];
+  }
+
+  function backtrack(trace,a,b,D,off){
+    let x=a.length,y=b.length,out=[];
+    for(let d=D;d>=0;d--){
+      const v=trace[d], k=x-y, idx=off+k;
+      let prevK;
+      if(d===0) prevK=0;
+      else if(k===-d || (k!==d && v[idx-1] < v[idx+1])) prevK=k+1;
+      else prevK=k-1;
+      const px=d===0?0:v[off+prevK], py=px-prevK;
+      while(x>px && y>py){ out.push({t:'eq',a:a[x-1],b:b[y-1]}); x--;y--; }
+      if(d===0) break;
+      if(x===px){ out.push({t:'add',b:b[y-1]}); y--; }
+      else{ out.push({t:'del',a:a[x-1]}); x--; }
+    }
+    return out.reverse();
+  }
+
+  function tokenize(s){
+    // GitHub-style intraline emphasis: words/punctuation/whitespace as tokens.
+    try{
+      const seg = new Intl.Segmenter('zh-CN',{granularity:'word'});
+      let arr=[];
+      for(const x of seg.segment(s)){
+        // Further split punctuation/whitespace so Chinese + punctuation highlight is tighter.
+        const p=x.segment.match(/\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu);
+        if(p) arr.push(...p); else arr.push(x.segment);
+      }
+      return arr;
+    }catch(e){
+      return s.match(/\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu) || Array.from(s);
+    }
+  }
+
+  function intraline(oldLine,newLine){
+    const x=tokenize(oldLine), y=tokenize(newLine);
+    if(x.length+y.length>5000){
+      return {old:`<span class="idel">${esc(oldLine)}</span>`, neu:`<span class="iadd">${esc(newLine)}</span>`};
+    }
+    const ops=myers(x,y,z=>z);
+    let old='',neu='',rt=null,buf='';
+    const flush=()=>{
+      if(!buf) return;
+      const e=esc(buf);
+      if(rt==='eq'){old+=e;neu+=e}
+      else if(rt==='del'){old+=`<span class="idel">${e}</span>`}
+      else if(rt==='add'){neu+=`<span class="iadd">${e}</span>`}
+      buf='';
+    };
+    for(const op of ops){
+      const t=op.t;
+      const val=t==='add'?op.b:op.a;
+      if(t!==rt){flush();rt=t}
+      buf+=val;
+    }
+    flush();
+    return {old,neu};
+  }
+
+  function similarity(a,b){
+    if(a===b) return 1;
+    const A=new Set(tokenize(a).filter(x=>!/\s+/.test(x)));
+    const B=new Set(tokenize(b).filter(x=>!/\s+/.test(x)));
+    if(!A.size || !B.size) return 0;
+    let inter=0;
+    for(const t of (A.size<B.size?A:B)) if((A.size<B.size?B:A).has(t)) inter++;
+    return 2*inter/(A.size+B.size);
+  }
+
+  // Convert raw line diff into display rows.
+  // Adjacent deletion/addition runs are paired greedily for intraline highlighting.
+  function buildRows(ops){
+    let rows=[],i=0,oldNo=1,newNo=1;
+    while(i<ops.length){
+      if(ops[i].t==='eq'){
+        rows.push({t:'ctx',oldNo,newNo,old:ops[i].a,neu:ops[i].b});
+        oldNo++;newNo++;i++;continue;
+      }
+      let dels=[],adds=[];
+      while(i<ops.length && ops[i].t!=='eq'){
+        if(ops[i].t==='del') dels.push({text:ops[i].a,no:oldNo++});
+        else adds.push({text:ops[i].b,no:newNo++});
+        i++;
+      }
+
+      // Pair the most natural lines in order, with a light similarity check.
+      let di=0,ai=0;
+      while(di<dels.length || ai<adds.length){
+        if(di<dels.length && ai<adds.length){
+          const s=similarity(dels[di].text,adds[ai].text);
+          if(s>=0.20 || dels.length-di===adds.length-ai){
+            const d=intraline(dels[di].text,adds[ai].text);
+            rows.push({t:'chg',oldNo:dels[di].no,newNo:adds[ai].no,old:d.old,neu:d.neu});
+            di++;ai++;continue;
+          }
+        }
+        // Otherwise emit the side that has more unpaired lines.
+        if(di<dels.length && (ai>=adds.length || (dels.length-di)>(adds.length-ai))){
+          rows.push({t:'del',oldNo:dels[di].no,old:esc(dels[di].text)}); di++;
+        }else if(ai<adds.length){
+          rows.push({t:'add',newNo:adds[ai].no,neu:esc(adds[ai].text)}); ai++;
+        }
+      }
+    }
+    return rows;
+  }
+
+  function hunks(rows, context=3){
+    // GitHub-like context collapse: keep N unchanged lines around changes.
+    const changed=rows.map((r,i)=>r.t!=='ctx'?i:-1).filter(i=>i>=0);
+    if(!changed.length) return [{start:0,end:rows.length-1}];
+    const ranges=[];
+    for(const idx of changed){
+      const s=Math.max(0,idx-context), e=Math.min(rows.length-1,idx+context);
+      const last=ranges[ranges.length-1];
+      if(last && s<=last.end+1) last.end=Math.max(last.end,e);
+      else ranges.push({start:s,end:e});
+    }
+    return ranges;
+  }
+
+  function hunkLabel(rows,s,e){
+    let os=null,ns=null,oc=0,nc=0;
+    for(let i=s;i<=e;i++){
+      const r=rows[i];
+      if(r.oldNo!=null){if(os==null)os=r.oldNo;oc++}
+      if(r.newNo!=null){if(ns==null)ns=r.newNo;nc++}
+    }
+    os=os??0; ns=ns??0;
+    return `@@ -${os},${oc} +${ns},${nc} @@`;
+  }
+
+  function renderUnified(rows){
+    const hs=hunks(rows,3);
+    let html='<table>';
+    for(const h of hs){
+      html+=`<tr class="hunk"><td colspan="3">${esc(hunkLabel(rows,h.start,h.end))}</td></tr>`;
+      for(let i=h.start;i<=h.end;i++){
+        const r=rows[i];
+        if(r.t==='ctx'){
+          html+=`<tr class="ctx"><td class="ln">${r.oldNo}</td><td class="sign"> </td><td class="code">${esc(r.old)}</td></tr>`;
+        }else if(r.t==='del'){
+          html+=`<tr class="del"><td class="ln">${r.oldNo}</td><td class="sign">−</td><td class="code">${r.old}</td></tr>`;
+        }else if(r.t==='add'){
+          html+=`<tr class="add"><td class="ln">${r.newNo}</td><td class="sign">+</td><td class="code">${r.neu}</td></tr>`;
+        }else{
+          html+=`<tr class="del"><td class="ln">${r.oldNo}</td><td class="sign">−</td><td class="code">${r.old}</td></tr>`;
+          html+=`<tr class="add"><td class="ln">${r.newNo}</td><td class="sign">+</td><td class="code">${r.neu}</td></tr>`;
+        }
+      }
+    }
+    html+='</table>';
+    return html;
+  }
+
+  function renderSplit(rows){
+    const hs=hunks(rows,3);
+    let html='<div class="side">';
+    for(const h of hs){
+      html+=`<div class="hunkbar">${esc(hunkLabel(rows,h.start,h.end))}</div>`;
+      for(let i=h.start;i<=h.end;i++){
+        const r=rows[i];
+        if(r.t==='ctx'){
+          html+=`<div class="ln">${r.oldNo}</div><div class="sign"> </div><div class="cell leftcode ctxbg">${esc(r.old)}</div><div class="ln">${r.newNo}</div><div class="sign"> </div><div class="cell ctxbg">${esc(r.neu)}</div>`;
+        }else if(r.t==='del'){
+          html+=`<div class="ln delbg">${r.oldNo}</div><div class="sign delbg">−</div><div class="cell leftcode delbg">${r.old}</div><div class="ln"></div><div class="sign"></div><div class="cell"></div>`;
+        }else if(r.t==='add'){
+          html+=`<div class="ln"></div><div class="sign"></div><div class="cell leftcode"></div><div class="ln addbg">${r.newNo}</div><div class="sign addbg">+</div><div class="cell addbg">${r.neu}</div>`;
+        }else{
+          html+=`<div class="ln delbg">${r.oldNo}</div><div class="sign delbg">−</div><div class="cell leftcode delbg">${r.old}</div><div class="ln addbg">${r.newNo}</div><div class="sign addbg">+</div><div class="cell addbg">${r.neu}</div>`;
+        }
+      }
+    }
+    html+='</div>';
+    return html;
+  }
+
+  function compare(){
+    const aa=lines(A.value), bb=lines(B.value);
+    const ops=myers(aa,bb,key);
+    const rows=buildRows(ops);
+    const adds=ops.filter(x=>x.t==='add').length;
+    const dels=ops.filter(x=>x.t==='del').length;
+    STATS.textContent=`旧版 ${aa.length} 行 · 新版 ${bb.length} 行 · +${adds} / −${dels}`;
+    OUT.innerHTML = $('#view').value==='split' ? renderSplit(rows) : renderUnified(rows);
+  }
+
+  $('#compare').addEventListener('click',compare);
+  $('#view').addEventListener('change',()=>{if(A.value||B.value) compare()});
+  $('#ignorews').addEventListener('change',()=>{if(A.value||B.value) compare()});
+  $('#swap').addEventListener('click',()=>{const t=A.value;A.value=B.value;B.value=t;count(A,'#lc');count(B,'#rc')});
+  $('#clear').addEventListener('click',()=>{A.value='';B.value='';count(A,'#lc');count(B,'#rc');STATS.textContent='尚未比较';OUT.innerHTML='<div class="empty">粘贴两版文字后点“比较”。</div>'});
+  $('#example').addEventListener('click',()=>{
+    A.value=`第一段：今天下午我们在实验室完成了第一次测试。
+第二段：参与者一共有三十人，其中十八人为本科生。
+第三段：实验结果显示，该方法显著提高了准确率。
+第四段：这一段完全没有修改。
+第五段：最后，我们讨论了研究的局限性。`;
+    B.value=`第一段：今天下午我们在实验室完成了第一次正式测试。
+第二段：参与者一共有四十五人，其中二十八人为本科生。
+这里新增了一整行。
+第三段：实验结果表明，该方法小幅提高了准确率。
+第四段：这一段完全没有修改。
+第五段：最后，我们详细讨论了研究的局限性。`;
+    count(A,'#lc');count(B,'#rc');compare();
+  });
+
+  count(A,'#lc');count(B,'#rc');
+})();
+</script>
+</body>
+</html>
