@@ -107,12 +107,17 @@ table{
   border-collapse:collapse;width:100%;table-layout:fixed;
   font:var(--font-size)/1.48 ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono","PingFang SC",monospace;
 }
+
+#diffTable col.col-ln{width:40px}
+#diffTable col.col-sign{width:24px}
+#diffTable col.col-code{width:auto}
+
 td{padding:0;vertical-align:top}
 td.ln{
-  width:32px;min-width:32px;text-align:right;padding:1px 4px;color:var(--muted);
+  width:40px;min-width:40px;text-align:right;padding:1px 6px;color:var(--muted);
   background:var(--num);border-right:1px solid var(--border);user-select:none;
 }
-td.sign{width:25px;min-width:25px;text-align:center;user-select:none}
+td.sign{width:24px;min-width:24px;text-align:center;user-select:none}
 td.code{padding:1px 9px;white-space:pre-wrap;overflow-wrap:anywhere}
 .nowrap td.code{white-space:pre;overflow-wrap:normal}
 tr.del td.code,tr.del td.sign{background:var(--del-bg)}
@@ -132,13 +137,13 @@ tr.current-change td{outline:2px solid var(--blue);outline-offset:-2px}
 .note{font-size:10px;color:var(--muted);padding:4px 8px;border-top:1px solid var(--border)}
 .side{
   display:grid;
-  grid-template-columns:46px 25px minmax(260px,1fr) 46px 25px minmax(260px,1fr);
+  grid-template-columns:40px 24px minmax(260px,1fr) 40px 24px minmax(260px,1fr);
   min-width:760px;
   font:var(--font-size)/1.48 ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono","PingFang SC",monospace;
 }
 .side.nowrap .cell{white-space:pre;overflow-wrap:normal}
 .side .cell{padding:1px 9px;white-space:pre-wrap;overflow-wrap:anywhere;min-height:21px}
-.side .ln{text-align:right;padding:1px 7px;color:var(--muted);background:var(--num);border-right:1px solid var(--border);user-select:none}
+.side .ln{text-align:right;padding:1px 6px;color:var(--muted);background:var(--num);border-right:1px solid var(--border);user-select:none}
 .side .sign{text-align:center;background:var(--num);user-select:none}
 .side .leftcode{border-right:1px solid var(--border)}
 .side .delbg{background:var(--del-bg)}
@@ -151,14 +156,17 @@ tr.current-change td{outline:2px solid var(--blue);outline-offset:-2px}
 .side .current-change{outline:2px solid var(--blue);outline-offset:-2px}
 #miniStatus{min-width:74px}
 @media(max-width:760px){
+  #diffTable col.col-ln{width:36px}
+  #diffTable col.col-sign{width:22px}
+
   .brand span{display:none}
   .topbar{align-items:flex-start}
   .toolbar{width:100%}
   .editors{grid-template-columns:minmax(80px,var(--left-width)) 10px minmax(80px,1fr)}
-  td.ln{width:32px;min-width:32px;padding-right:4px}
+  td.ln{width:36px;min-width:36px;padding-right:5px}
   td.sign{width:22px;min-width:22px}
   td.code{padding-left:7px;padding-right:7px}
-  .side{grid-template-columns:38px 22px minmax(240px,1fr) 38px 22px minmax(240px,1fr);min-width:690px}
+  .side{grid-template-columns:36px 22px minmax(240px,1fr) 36px 22px minmax(240px,1fr);min-width:690px}
 }
 </style>
 </head>
@@ -548,7 +556,12 @@ tr.current-change td{outline:2px solid var(--blue);outline-offset:-2px}
   function renderUnified(rows){
     const context=parseInt($('#contextLines').value,10);
     const hs=makeHunks(rows,context);
-    let html='<table id="diffTable">', changeId=0;
+    let html=`<table id="diffTable">
+      <colgroup>
+        <col class="col-ln">
+        <col class="col-sign">
+        <col class="col-code">
+      </colgroup>`, changeId=0;
 
     for(const h of hs){
       html+=`<tr class="hunk"><td colspan="3">${esc(hunkLabel(rows,h.start,h.end))}</td></tr>`;
