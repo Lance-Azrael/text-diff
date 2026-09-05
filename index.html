@@ -69,7 +69,12 @@ label.opt{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:1
   min-height:34px;padding:5px 9px;border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;gap:7px;font-size:12px;font-weight:600;
 }
-.count{color:var(--muted);font-weight:400}
+.panehead-left,.panehead-right{display:flex;align-items:center;gap:6px;min-width:0}
+.panehead-right{margin-left:auto}
+.pane-action{
+  min-height:28px;padding:3px 8px;border-radius:6px;font-size:11px;line-height:1;
+}
+.count{color:var(--muted);font-weight:400;white-space:nowrap}
 textarea{
   width:100%;height:100%;min-width:0;min-height:0;resize:none;border:0;outline:0;
   background:var(--panel);color:var(--fg);padding:9px 11px;
@@ -104,7 +109,7 @@ table{
 }
 td{padding:0;vertical-align:top}
 td.ln{
-  width:46px;min-width:46px;text-align:right;padding:1px 7px;color:var(--muted);
+  width:32px;min-width:32px;text-align:right;padding:1px 4px;color:var(--muted);
   background:var(--num);border-right:1px solid var(--border);user-select:none;
 }
 td.sign{width:25px;min-width:25px;text-align:center;user-select:none}
@@ -150,7 +155,7 @@ tr.current-change td{outline:2px solid var(--blue);outline-offset:-2px}
   .topbar{align-items:flex-start}
   .toolbar{width:100%}
   .editors{grid-template-columns:minmax(80px,var(--left-width)) 10px minmax(80px,1fr)}
-  td.ln{width:38px;min-width:38px;padding-right:5px}
+  td.ln{width:32px;min-width:32px;padding-right:4px}
   td.sign{width:22px;min-width:22px}
   td.code{padding-left:7px;padding-right:7px}
   .side{grid-template-columns:38px 22px minmax(240px,1fr) 38px 22px minmax(240px,1fr);min-width:690px}
@@ -210,15 +215,33 @@ tr.current-change td{outline:2px solid var(--blue);outline-offset:-2px}
   <div class="workspace" id="workspace">
     <div class="editors" id="editors">
       <section class="pane">
-        <div class="panehead"><span>旧版</span><span class="count" id="leftCount">0 行 · 0 字</span></div>
-        <textarea id="leftText" spellcheck="false" placeholder="复制旧版文字"></textarea>
+        <div class="panehead">
+          <div class="panehead-left">
+            <span>旧版</span>
+            <span class="count" id="leftCount">0 行 · 0 字</span>
+          </div>
+          <div class="panehead-right">
+            <button class="pane-action" id="selectLeftBtn" type="button">全选</button>
+            <button class="pane-action" id="copyLeftBtn" type="button">复制</button>
+          </div>
+        </div>
+        <textarea id="leftText" spellcheck="false" placeholder="粘贴或输入旧版文字"></textarea>
       </section>
 
       <div id="vSplit" class="vsplit" role="separator" aria-label="调整旧版和新版宽度" aria-orientation="vertical" tabindex="0"></div>
 
       <section class="pane">
-        <div class="panehead"><span>新版</span><span class="count" id="rightCount">0 行 · 0 字</span></div>
-        <textarea id="rightText" spellcheck="false" placeholder="复制新版文字"></textarea>
+        <div class="panehead">
+          <div class="panehead-left">
+            <span>新版</span>
+            <span class="count" id="rightCount">0 行 · 0 字</span>
+          </div>
+          <div class="panehead-right">
+            <button class="pane-action" id="selectRightBtn" type="button">全选</button>
+            <button class="pane-action" id="copyRightBtn" type="button">复制</button>
+          </div>
+        </div>
+        <textarea id="rightText" spellcheck="false" placeholder="粘贴或输入新版文字"></textarea>
       </section>
     </div>
 
@@ -236,7 +259,7 @@ tr.current-change td{outline:2px solid var(--blue);outline-offset:-2px}
         </div>
       </div>
       <div class="diff" id="diffOut"><div class="empty">粘贴两版文字后点“比较”。</div></div>
-      <div class="note">默认是 Git/GitHub 风格的 Myers 按行比较。若自然段没有换行，可切到“按句子”。拖动两个灰色分隔条即可调整三块区域。</div>
+      <div class="note">默认使用 Git/GitHub 风格的 Myers 按行比较。若原文没有合适的换行，可切换到“按句子”。拖动两个灰色分隔条即可调整三个区域的大小。</div>
     </section>
   </div>
 </div>
@@ -645,6 +668,43 @@ tr.current-change td{outline:2px solid var(--blue);outline-offset:-2px}
     if(!state.rows.length && !leftText.value && !rightText.value) return;
     compare();
   }
+
+
+  function selectAllText(textarea){
+    textarea.focus();
+    textarea.setSelectionRange(0, textarea.value.length);
+  }
+
+  async function copyAllText(textarea, button){
+    const originalLabel = button.textContent;
+    let ok = false;
+
+    try{
+      if(navigator.clipboard && window.isSecureContext){
+        await navigator.clipboard.writeText(textarea.value);
+        ok = true;
+      }
+    }catch(e){}
+
+    if(!ok){
+      try{
+        selectAllText(textarea);
+        ok = document.execCommand('copy');
+      }catch(e){}
+    }
+
+    button.textContent = ok ? '已复制' : '复制失败';
+    if(ok) selectAllText(textarea);
+
+    setTimeout(()=>{
+      button.textContent = originalLabel;
+    }, 1200);
+  }
+
+  $('#selectLeftBtn').addEventListener('click',()=>selectAllText(leftText));
+  $('#selectRightBtn').addEventListener('click',()=>selectAllText(rightText));
+  $('#copyLeftBtn').addEventListener('click',()=>copyAllText(leftText,$('#copyLeftBtn')));
+  $('#copyRightBtn').addEventListener('click',()=>copyAllText(rightText,$('#copyRightBtn')));
 
   // Drag splitters with Pointer Events: works for mouse, Pencil, and touch.
   function setupVerticalSplitter(){
