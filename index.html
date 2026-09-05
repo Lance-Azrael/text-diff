@@ -12,170 +12,349 @@
   --del-bg:#ffebe9; --del-strong:#ff818266; --del-fg:#cf222e;
   --add-bg:#dafbe1; --add-strong:#2da44e66; --add-fg:#116329;
   --hunk:#ddf4ff; --hunk-fg:#0969da;
-  --num:#f6f8fa; --hover:#f3f4f6;
+  --num:#f6f8fa; --hover:#f3f4f6; --splitter:#8c959f;
+  --editor-height:36%; --left-width:50%; --font-size:13px;
 }
 @media (prefers-color-scheme:dark){
-:root{
-  --bg:#0d1117; --panel:#0d1117; --fg:#e6edf3; --muted:#848d97; --border:#30363d;
-  --blue:#4493f8; --blue2:#2f81f7;
-  --del-bg:#3f1518; --del-strong:#ff7b7255; --del-fg:#ff7b72;
-  --add-bg:#12261e; --add-strong:#3fb95055; --add-fg:#3fb950;
-  --hunk:#132f4c; --hunk-fg:#79c0ff;
-  --num:#161b22; --hover:#161b22;
-}}
-*{box-sizing:border-box}
-html,body{margin:0;min-height:100%;background:var(--bg);color:var(--fg)}
-body{
-  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+  :root{
+    --bg:#0d1117; --panel:#0d1117; --fg:#e6edf3; --muted:#848d97; --border:#30363d;
+    --blue:#4493f8; --blue2:#2f81f7;
+    --del-bg:#3f1518; --del-strong:#ff7b7255; --del-fg:#ff7b72;
+    --add-bg:#12261e; --add-strong:#3fb95055; --add-fg:#3fb950;
+    --hunk:#132f4c; --hunk-fg:#79c0ff; --num:#161b22; --hover:#161b22; --splitter:#6e7681;
+  }
 }
-.app{max-width:1500px;margin:0 auto;padding:14px}
-.top{display:flex;align-items:flex-start;gap:12px;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px}
-.title{font-size:22px;font-weight:700;margin:0 0 4px}
-.subtitle{font-size:13px;color:var(--muted);line-height:1.45}
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--fg)}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif}
+button,select,textarea{font:inherit}
 button,select{
-  min-height:38px;border:1px solid var(--border);background:var(--panel);color:var(--fg);
-  border-radius:6px;padding:7px 11px;font:inherit
+  min-height:36px;border:1px solid var(--border);background:var(--panel);color:var(--fg);
+  border-radius:7px;padding:6px 10px;
 }
 button.primary{background:var(--blue2);border-color:var(--blue2);color:#fff;font-weight:600}
+button.active{background:var(--blue);border-color:var(--blue);color:#fff}
 button:active{transform:translateY(1px)}
-label.opt{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
-.inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
-.box{border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
-.boxhead{display:flex;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600}
+button:disabled{opacity:.45}
+label.opt{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:12px;white-space:nowrap}
+.app{
+  width:100%;height:100dvh;min-height:0;
+  display:grid;grid-template-rows:auto minmax(0,1fr);
+  background:var(--bg);
+}
+.topbar{
+  padding:7px max(8px,env(safe-area-inset-right)) 7px max(8px,env(safe-area-inset-left));
+  border-bottom:1px solid var(--border);background:var(--panel);
+  display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap;
+}
+.brand{display:flex;align-items:baseline;gap:8px;min-width:0}
+.brand strong{font-size:15px;white-space:nowrap}
+.brand span{font-size:11px;color:var(--muted);white-space:nowrap}
+.toolbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.toolbar .group{display:flex;gap:4px;align-items:center}
+.workspace{
+  min-height:0;
+  display:grid;
+  grid-template-rows:minmax(90px,var(--editor-height)) 12px minmax(100px,1fr);
+}
+.workspace.diff-only{grid-template-rows:0 0 minmax(0,1fr)}
+.workspace.diff-only .editors,.workspace.diff-only #hSplit{display:none}
+.editors{
+  min-height:0;
+  display:grid;
+  grid-template-columns:minmax(100px,var(--left-width)) 12px minmax(100px,1fr);
+}
+.pane{min-width:0;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);background:var(--panel)}
+.panehead{
+  min-height:34px;padding:5px 9px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:7px;font-size:12px;font-weight:600;
+}
 .count{color:var(--muted);font-weight:400}
 textarea{
-  display:block;width:100%;min-height:28vh;border:0;outline:0;resize:vertical;background:var(--panel);color:var(--fg);
-  padding:10px 12px;font:14px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono","PingFang SC",monospace;
+  width:100%;height:100%;min-width:0;min-height:0;resize:none;border:0;outline:0;
+  background:var(--panel);color:var(--fg);padding:9px 11px;
+  font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono","PingFang SC",monospace;
   tab-size:4;
 }
-.panel{border:1px solid var(--border);border-radius:6px;background:var(--panel);overflow:hidden}
-.panelhead{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--border);font-size:13px}
+textarea:focus{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--blue) 55%,transparent)}
+.vsplit,.hsplit{
+  position:relative;background:var(--bg);touch-action:none;user-select:none;
+}
+.vsplit{cursor:col-resize;border-left:1px solid var(--border);border-right:1px solid var(--border)}
+.hsplit{cursor:row-resize;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.vsplit::after,.hsplit::after{
+  content:"";position:absolute;border-radius:999px;background:var(--splitter);
+}
+.vsplit::after{width:3px;height:38px;left:50%;top:50%;transform:translate(-50%,-50%)}
+.hsplit::after{height:3px;width:60px;left:50%;top:50%;transform:translate(-50%,-50%)}
+.vsplit.dragging,.hsplit.dragging{background:color-mix(in srgb,var(--blue) 15%,var(--bg))}
+.vsplit:focus-visible,.hsplit:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+.result{min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:var(--panel)}
+.resulthead{
+  min-height:36px;padding:5px 8px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px;
+}
+.resultleft,.resultright{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .stats{color:var(--muted)}
-.legend{display:flex;gap:10px;color:var(--muted);font-size:12px;flex-wrap:wrap}
-.legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:0}
-.legend .ld::before{background:var(--del-bg);border:1px solid var(--del-fg)}
-.legend .la::before{background:var(--add-bg);border:1px solid var(--add-fg)}
-.diff{overflow:auto}
-table{border-collapse:collapse;width:100%;table-layout:fixed;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono","PingFang SC",monospace}
+.chip{color:var(--muted);font-size:11px}
+.diff{min-height:0;overflow:auto;overscroll-behavior:contain;background:var(--panel)}
+table{
+  border-collapse:collapse;width:100%;table-layout:fixed;
+  font:var(--font-size)/1.48 ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono","PingFang SC",monospace;
+}
 td{padding:0;vertical-align:top}
 td.ln{
-  width:48px;min-width:48px;text-align:right;padding:1px 8px;color:var(--muted);
-  background:var(--num);border-right:1px solid var(--border);user-select:none
+  width:46px;min-width:46px;text-align:right;padding:1px 7px;color:var(--muted);
+  background:var(--num);border-right:1px solid var(--border);user-select:none;
 }
-td.code{padding:1px 10px;white-space:pre-wrap;overflow-wrap:anywhere}
-tr.del td.code{background:var(--del-bg)}
-tr.add td.code{background:var(--add-bg)}
-tr.del td.sign{background:var(--del-bg);color:var(--del-fg)}
-tr.add td.sign{background:var(--add-bg);color:var(--add-fg)}
-td.sign{width:26px;min-width:26px;text-align:center;user-select:none}
+td.sign{width:25px;min-width:25px;text-align:center;user-select:none}
+td.code{padding:1px 9px;white-space:pre-wrap;overflow-wrap:anywhere}
+.nowrap td.code{white-space:pre;overflow-wrap:normal}
+tr.del td.code,tr.del td.sign{background:var(--del-bg)}
+tr.add td.code,tr.add td.sign{background:var(--add-bg)}
+tr.del td.sign{color:var(--del-fg)}
+tr.add td.sign{color:var(--add-fg)}
 tr.ctx:hover td.code{background:var(--hover)}
 span.idel{background:var(--del-strong);border-radius:2px}
 span.iadd{background:var(--add-strong);border-radius:2px}
-tr.hunk td{background:var(--hunk);color:var(--hunk-fg);padding:4px 10px;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.empty{padding:28px;text-align:center;color:var(--muted)}
-.mobiletabs{display:none;gap:6px;padding:8px;border-bottom:1px solid var(--border)}
-.mobiletabs button.active{background:var(--blue);color:#fff;border-color:var(--blue)}
-.side{display:grid;grid-template-columns:48px 26px 1fr 48px 26px 1fr}
-.side .cell{padding:1px 10px;white-space:pre-wrap;overflow-wrap:anywhere;min-height:22px}
-.side .ln,.side .sign{background:var(--num)}
-.side .ln{text-align:right;padding:1px 8px;color:var(--muted);border-right:1px solid var(--border);user-select:none}
-.side .sign{text-align:center;user-select:none}
+tr.hunk td{
+  background:var(--hunk);color:var(--hunk-fg);padding:4px 9px;
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+}
+tr.change-anchor{scroll-margin-top:34px}
+tr.current-change td{outline:2px solid var(--blue);outline-offset:-2px}
+.empty{padding:26px;text-align:center;color:var(--muted)}
+.note{font-size:10px;color:var(--muted);padding:4px 8px;border-top:1px solid var(--border)}
+.side{
+  display:grid;
+  grid-template-columns:46px 25px minmax(260px,1fr) 46px 25px minmax(260px,1fr);
+  min-width:760px;
+  font:var(--font-size)/1.48 ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono","PingFang SC",monospace;
+}
+.side.nowrap .cell{white-space:pre;overflow-wrap:normal}
+.side .cell{padding:1px 9px;white-space:pre-wrap;overflow-wrap:anywhere;min-height:21px}
+.side .ln{text-align:right;padding:1px 7px;color:var(--muted);background:var(--num);border-right:1px solid var(--border);user-select:none}
+.side .sign{text-align:center;background:var(--num);user-select:none}
 .side .leftcode{border-right:1px solid var(--border)}
 .side .delbg{background:var(--del-bg)}
 .side .addbg{background:var(--add-bg)}
-.side .ctxbg:hover{background:var(--hover)}
-.side .hunkbar{grid-column:1/-1;background:var(--hunk);color:var(--hunk-fg);padding:4px 10px;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.note{font-size:12px;color:var(--muted);padding:8px 10px;border-top:1px solid var(--border)}
-@media(max-width:850px){
-  .app{padding:8px}
-  .inputs{grid-template-columns:1fr}
-  textarea{min-height:22vh}
-  .legend{display:none}
+.side .hunkbar{
+  grid-column:1/-1;background:var(--hunk);color:var(--hunk-fg);
+  padding:4px 9px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+}
+.side .change-anchor{scroll-margin-top:34px}
+.side .current-change{outline:2px solid var(--blue);outline-offset:-2px}
+#miniStatus{min-width:74px}
+@media(max-width:760px){
+  .brand span{display:none}
+  .topbar{align-items:flex-start}
+  .toolbar{width:100%}
+  .editors{grid-template-columns:minmax(80px,var(--left-width)) 10px minmax(80px,1fr)}
   td.ln{width:38px;min-width:38px;padding-right:5px}
   td.sign{width:22px;min-width:22px}
   td.code{padding-left:7px;padding-right:7px}
-  .side{grid-template-columns:38px 22px minmax(260px,1fr) 38px 22px minmax(260px,1fr);min-width:780px}
+  .side{grid-template-columns:38px 22px minmax(240px,1fr) 38px 22px minmax(240px,1fr);min-width:690px}
 }
 </style>
 </head>
 <body>
 <div class="app">
-  <div class="top">
-    <div>
-      <div class="title">Text Diff · GitHub Style</div>
-      <div class="subtitle">按行做 Myers diff，再对“删除行 ↔ 新增行”做行内词/字符高亮。纯前端，本页不会上传你的文字。</div>
+  <div class="topbar">
+    <div class="brand">
+      <strong>Text Diff</strong>
+      <span>GitHub-style · 本地处理</span>
     </div>
     <div class="toolbar">
-      <button class="primary" id="compare">比较</button>
-      <button id="swap">左右互换</button>
-      <button id="example">示例</button>
-      <button id="clear">清空</button>
-      <select id="view">
-        <option value="unified" selected>Unified</option>
-        <option value="split">Split</option>
+      <button class="primary" id="compareBtn">比较</button>
+      <button id="swapBtn">互换</button>
+      <button id="diffOnlyBtn" title="隐藏/显示上方两个编辑窗口">只看 Diff</button>
+
+      <div class="group">
+        <button id="prevBtn" title="上一处修改">↑ 修改</button>
+        <button id="nextBtn" title="下一处修改">↓ 修改</button>
+        <span id="miniStatus" class="chip">0 / 0</span>
+      </div>
+
+      <select id="viewMode" title="比较视图">
+        <option value="unified">Unified</option>
+        <option value="split" selected>Split</option>
       </select>
-      <label class="opt"><input id="ignorews" type="checkbox">忽略空白差异</label>
+
+      <select id="unitMode" title="比较单位">
+        <option value="line" selected>按行</option>
+        <option value="sentence">按句子</option>
+      </select>
+
+      <select id="contextLines" title="未修改上下文行数">
+        <option value="0">上下文 0</option>
+        <option value="1">上下文 1</option>
+        <option value="3" selected>上下文 3</option>
+        <option value="5">上下文 5</option>
+        <option value="10">上下文 10</option>
+        <option value="999999">显示全部</option>
+      </select>
+
+      <label class="opt"><input id="ignoreWs" type="checkbox">忽略空白</label>
+      <label class="opt"><input id="wrapLines" type="checkbox" checked>自动换行</label>
+
+      <div class="group">
+        <button id="fontMinus" title="减小 Diff 字号">A−</button>
+        <button id="fontPlus" title="增大 Diff 字号">A+</button>
+      </div>
+
+      <button id="resetLayout" title="恢复默认窗口比例">重置布局</button>
+      <button id="clearBtn">清空</button>
     </div>
   </div>
 
-  <div class="inputs">
-    <div class="box">
-      <div class="boxhead"><span>旧版</span><span class="count" id="lc">0 行 · 0 字</span></div>
-      <textarea id="a" spellcheck="false" placeholder="从备忘录复制旧版文字，粘贴到这里"></textarea>
-    </div>
-    <div class="box">
-      <div class="boxhead"><span>新版</span><span class="count" id="rc">0 行 · 0 字</span></div>
-      <textarea id="b" spellcheck="false" placeholder="从备忘录复制新版文字，粘贴到这里"></textarea>
-    </div>
-  </div>
+  <div class="workspace" id="workspace">
+    <div class="editors" id="editors">
+      <section class="pane">
+        <div class="panehead"><span>旧版</span><span class="count" id="leftCount">0 行 · 0 字</span></div>
+        <textarea id="leftText" spellcheck="false" placeholder="复制旧版文字"></textarea>
+      </section>
 
-  <div class="panel">
-    <div class="panelhead">
-      <div class="stats" id="stats">尚未比较</div>
-      <div class="legend"><span class="ld">删除</span><span class="la">新增</span></div>
+      <div id="vSplit" class="vsplit" role="separator" aria-label="调整旧版和新版宽度" aria-orientation="vertical" tabindex="0"></div>
+
+      <section class="pane">
+        <div class="panehead"><span>新版</span><span class="count" id="rightCount">0 行 · 0 字</span></div>
+        <textarea id="rightText" spellcheck="false" placeholder="复制新版文字"></textarea>
+      </section>
     </div>
-    <div class="diff" id="out"><div class="empty">粘贴两版文字后点“比较”。</div></div>
-    <div class="note">提示：这版故意采用 Git/GitHub 风格的“按行比较”。如果备忘录里一整段只有一个物理换行，它会把整段当作一行。</div>
+
+    <div id="hSplit" class="hsplit" role="separator" aria-label="调整编辑区和比较结果高度" aria-orientation="horizontal" tabindex="0"></div>
+
+    <section class="result">
+      <div class="resulthead">
+        <div class="resultleft">
+          <strong>比较结果</strong>
+          <span class="stats" id="stats">尚未比较</span>
+        </div>
+        <div class="resultright">
+          <span class="chip">红 = 删除</span>
+          <span class="chip">绿 = 新增</span>
+        </div>
+      </div>
+      <div class="diff" id="diffOut"><div class="empty">粘贴两版文字后点“比较”。</div></div>
+      <div class="note">默认是 Git/GitHub 风格的 Myers 按行比较。若自然段没有换行，可切到“按句子”。拖动两个灰色分隔条即可调整三块区域。</div>
+    </section>
   </div>
 </div>
 
 <script>
 (() => {
   const $ = s => document.querySelector(s);
-  const A = $('#a'), B = $('#b'), OUT = $('#out'), STATS = $('#stats');
+  const root = document.documentElement;
+  const workspace = $('#workspace');
+  const editors = $('#editors');
+  const leftText = $('#leftText');
+  const rightText = $('#rightText');
+  const diffOut = $('#diffOut');
+  const stats = $('#stats');
 
-  const esc = s => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const normNL = s => s.replace(/\r\n?/g, '\n');
-  const lines = s => normNL(s).split('\n');
+  const state = {
+    rows: [],
+    changes: [],
+    currentChange: -1,
+    fontSize: 13,
+    editorPct: 36,
+    leftPct: 50,
+    diffOnly: false
+  };
 
-  function count(el, target){
-    const s = normNL(el.value);
-    $(target).textContent = `${s ? s.split('\n').length : 0} 行 · ${s.length.toLocaleString()} 字`;
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const normNL = s => s.replace(/\r\n?/g,'\n');
+
+  function safeGet(k, fallback){
+    try{
+      const v = localStorage.getItem(k);
+      return v === null ? fallback : v;
+    }catch(e){ return fallback; }
   }
-  A.addEventListener('input',()=>count(A,'#lc'));
-  B.addEventListener('input',()=>count(B,'#rc'));
+  function safeSet(k,v){
+    try{ localStorage.setItem(k,String(v)); }catch(e){}
+  }
+
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+
+  function saveLayout(){
+    safeSet('td_editorPct', state.editorPct);
+    safeSet('td_leftPct', state.leftPct);
+    safeSet('td_fontSize', state.fontSize);
+  }
+
+  function loadPrefs(){
+    state.editorPct = clamp(parseFloat(safeGet('td_editorPct','36')) || 36, 12, 82);
+    state.leftPct = clamp(parseFloat(safeGet('td_leftPct','50')) || 50, 15, 85);
+    state.fontSize = clamp(parseInt(safeGet('td_fontSize','13'),10) || 13, 10, 22);
+    $('#viewMode').value = safeGet('td_view','split');
+    $('#unitMode').value = safeGet('td_unit','line');
+    $('#contextLines').value = safeGet('td_context','3');
+    $('#ignoreWs').checked = safeGet('td_ignoreWs','0') === '1';
+    $('#wrapLines').checked = safeGet('td_wrap','1') !== '0';
+    applyLayout();
+  }
+
+  function applyLayout(){
+    root.style.setProperty('--editor-height', state.editorPct + '%');
+    root.style.setProperty('--left-width', state.leftPct + '%');
+    root.style.setProperty('--font-size', state.fontSize + 'px');
+  }
+
+  function updateCounts(){
+    for(const [el,target] of [[leftText,'#leftCount'],[rightText,'#rightCount']]){
+      const s = normNL(el.value);
+      const n = s ? s.split('\n').length : 0;
+      $(target).textContent = `${n} 行 · ${s.length.toLocaleString()} 字`;
+    }
+  }
+
+  leftText.addEventListener('input', updateCounts);
+  rightText.addEventListener('input', updateCounts);
+
+  function segmentSentences(text){
+    text = normNL(text);
+    if(!text) return [''];
+    try{
+      const seg = new Intl.Segmenter('zh-CN',{granularity:'sentence'});
+      const out = [...seg.segment(text)].map(x=>x.segment.trim()).filter(Boolean);
+      return out.length ? out : [''];
+    }catch(e){
+      const out = text.split(/(?<=[。！？!?；;\.])\s*/).map(x=>x.trim()).filter(Boolean);
+      return out.length ? out : [''];
+    }
+  }
+
+  function getUnits(text){
+    if($('#unitMode').value === 'sentence') return segmentSentences(text);
+    return normNL(text).split('\n');
+  }
 
   function key(s){
-    if(!$('#ignorews').checked) return s;
+    if(!$('#ignoreWs').checked) return s;
     return s.replace(/\s+/g,' ').trim();
   }
 
-  // Myers shortest-edit-script diff, line based.
-  function myers(a,b, keyFn=x=>x){
-    const N=a.length,M=b.length,max=N+M,off=max+1;
-    let v=new Int32Array(2*max+3); v.fill(-1); v[off+1]=0;
+  // Myers shortest-edit-script. This is the core Git-style line diff.
+  function myers(a,b,keyFn=x=>x){
+    const N=a.length, M=b.length, max=N+M, off=max+1;
+    let v = new Int32Array(2*max+3);
+    v.fill(-1);
+    v[off+1]=0;
     const trace=[];
-    for(let d=0;d<=max;d++){
+
+    for(let d=0; d<=max; d++){
       trace.push(v.slice());
-      for(let k=-d;k<=d;k+=2){
+      for(let k=-d; k<=d; k+=2){
         const idx=off+k;
         let x;
         if(k===-d || (k!==d && v[idx-1] < v[idx+1])) x=v[idx+1];
         else x=v[idx-1]+1;
+
         let y=x-k;
-        while(x<N && y<M && keyFn(a[x])===keyFn(b[y])){x++;y++}
+        while(x<N && y<M && keyFn(a[x])===keyFn(b[y])){ x++; y++; }
         v[idx]=x;
+
         if(x>=N && y>=M) return backtrack(trace,a,b,d,off);
       }
     }
@@ -184,30 +363,43 @@ tr.hunk td{background:var(--hunk);color:var(--hunk-fg);padding:4px 10px;border-t
 
   function backtrack(trace,a,b,D,off){
     let x=a.length,y=b.length,out=[];
-    for(let d=D;d>=0;d--){
-      const v=trace[d], k=x-y, idx=off+k;
+    for(let d=D; d>=0; d--){
+      const v=trace[d];
+      const k=x-y, idx=off+k;
       let prevK;
+
       if(d===0) prevK=0;
       else if(k===-d || (k!==d && v[idx-1] < v[idx+1])) prevK=k+1;
       else prevK=k-1;
-      const px=d===0?0:v[off+prevK], py=px-prevK;
-      while(x>px && y>py){ out.push({t:'eq',a:a[x-1],b:b[y-1]}); x--;y--; }
+
+      const px = d===0 ? 0 : v[off+prevK];
+      const py = px-prevK;
+
+      while(x>px && y>py){
+        out.push({t:'eq',a:a[x-1],b:b[y-1]});
+        x--; y--;
+      }
       if(d===0) break;
-      if(x===px){ out.push({t:'add',b:b[y-1]}); y--; }
-      else{ out.push({t:'del',a:a[x-1]}); x--; }
+
+      if(x===px){
+        out.push({t:'add',b:b[y-1]});
+        y--;
+      }else{
+        out.push({t:'del',a:a[x-1]});
+        x--;
+      }
     }
     return out.reverse();
   }
 
   function tokenize(s){
-    // GitHub-style intraline emphasis: words/punctuation/whitespace as tokens.
     try{
       const seg = new Intl.Segmenter('zh-CN',{granularity:'word'});
-      let arr=[];
+      const arr=[];
       for(const x of seg.segment(s)){
-        // Further split punctuation/whitespace so Chinese + punctuation highlight is tighter.
-        const p=x.segment.match(/\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu);
-        if(p) arr.push(...p); else arr.push(x.segment);
+        const pieces=x.segment.match(/\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu);
+        if(pieces) arr.push(...pieces);
+        else arr.push(x.segment);
       }
       return arr;
     }catch(e){
@@ -216,49 +408,55 @@ tr.hunk td{background:var(--hunk);color:var(--hunk-fg);padding:4px 10px;border-t
   }
 
   function intraline(oldLine,newLine){
-    const x=tokenize(oldLine), y=tokenize(newLine);
-    if(x.length+y.length>5000){
-      return {old:`<span class="idel">${esc(oldLine)}</span>`, neu:`<span class="iadd">${esc(newLine)}</span>`};
+    const a=tokenize(oldLine), b=tokenize(newLine);
+    if(a.length+b.length>6000){
+      return {old:`<span class="idel">${esc(oldLine)}</span>`,neu:`<span class="iadd">${esc(newLine)}</span>`};
     }
-    const ops=myers(x,y,z=>z);
-    let old='',neu='',rt=null,buf='';
-    const flush=()=>{
+    const ops=myers(a,b,x=>x);
+    let L='',R='',type=null,buf='';
+
+    function flush(){
       if(!buf) return;
       const e=esc(buf);
-      if(rt==='eq'){old+=e;neu+=e}
-      else if(rt==='del'){old+=`<span class="idel">${e}</span>`}
-      else if(rt==='add'){neu+=`<span class="iadd">${e}</span>`}
+      if(type==='eq'){ L+=e; R+=e; }
+      else if(type==='del') L+=`<span class="idel">${e}</span>`;
+      else if(type==='add') R+=`<span class="iadd">${e}</span>`;
       buf='';
-    };
+    }
+
     for(const op of ops){
       const t=op.t;
       const val=t==='add'?op.b:op.a;
-      if(t!==rt){flush();rt=t}
+      if(t!==type){ flush(); type=t; }
       buf+=val;
     }
     flush();
-    return {old,neu};
+    return {old:L,neu:R};
   }
 
   function similarity(a,b){
     if(a===b) return 1;
-    const A=new Set(tokenize(a).filter(x=>!/\s+/.test(x)));
-    const B=new Set(tokenize(b).filter(x=>!/\s+/.test(x)));
+    const aa=tokenize(a).filter(x=>!/\s+/.test(x));
+    const bb=tokenize(b).filter(x=>!/\s+/.test(x));
+    const A=new Set(aa), B=new Set(bb);
     if(!A.size || !B.size) return 0;
     let inter=0;
-    for(const t of (A.size<B.size?A:B)) if((A.size<B.size?B:A).has(t)) inter++;
+    const small=A.size<=B.size?A:B;
+    const large=small===A?B:A;
+    for(const t of small) if(large.has(t)) inter++;
     return 2*inter/(A.size+B.size);
   }
 
-  // Convert raw line diff into display rows.
-  // Adjacent deletion/addition runs are paired greedily for intraline highlighting.
   function buildRows(ops){
     let rows=[],i=0,oldNo=1,newNo=1;
+
     while(i<ops.length){
       if(ops[i].t==='eq'){
         rows.push({t:'ctx',oldNo,newNo,old:ops[i].a,neu:ops[i].b});
-        oldNo++;newNo++;i++;continue;
+        oldNo++; newNo++; i++;
+        continue;
       }
+
       let dels=[],adds=[];
       while(i<ops.length && ops[i].t!=='eq'){
         if(ops[i].t==='del') dels.push({text:ops[i].a,no:oldNo++});
@@ -266,36 +464,48 @@ tr.hunk td{background:var(--hunk);color:var(--hunk-fg);padding:4px 10px;border-t
         i++;
       }
 
-      // Pair the most natural lines in order, with a light similarity check.
       let di=0,ai=0;
       while(di<dels.length || ai<adds.length){
         if(di<dels.length && ai<adds.length){
           const s=similarity(dels[di].text,adds[ai].text);
-          if(s>=0.20 || dels.length-di===adds.length-ai){
+
+          if(s>=0.20 || (dels.length-di)===(adds.length-ai)){
             const d=intraline(dels[di].text,adds[ai].text);
-            rows.push({t:'chg',oldNo:dels[di].no,newNo:adds[ai].no,old:d.old,neu:d.neu});
-            di++;ai++;continue;
+            rows.push({
+              t:'chg',
+              oldNo:dels[di].no,newNo:adds[ai].no,
+              old:d.old,neu:d.neu,
+              rawOld:dels[di].text,rawNeu:adds[ai].text
+            });
+            di++; ai++;
+            continue;
           }
         }
-        // Otherwise emit the side that has more unpaired lines.
+
         if(di<dels.length && (ai>=adds.length || (dels.length-di)>(adds.length-ai))){
-          rows.push({t:'del',oldNo:dels[di].no,old:esc(dels[di].text)}); di++;
+          rows.push({t:'del',oldNo:dels[di].no,old:esc(dels[di].text)});
+          di++;
         }else if(ai<adds.length){
-          rows.push({t:'add',newNo:adds[ai].no,neu:esc(adds[ai].text)}); ai++;
+          rows.push({t:'add',newNo:adds[ai].no,neu:esc(adds[ai].text)});
+          ai++;
         }
       }
     }
     return rows;
   }
 
-  function hunks(rows, context=3){
-    // GitHub-like context collapse: keep N unchanged lines around changes.
-    const changed=rows.map((r,i)=>r.t!=='ctx'?i:-1).filter(i=>i>=0);
-    if(!changed.length) return [{start:0,end:rows.length-1}];
+  function makeHunks(rows,context){
+    if(context>=999999) return rows.length ? [{start:0,end:rows.length-1}] : [];
+    const changed=[];
+    rows.forEach((r,i)=>{ if(r.t!=='ctx') changed.push(i); });
+    if(!changed.length) return rows.length ? [{start:0,end:rows.length-1}] : [];
+
     const ranges=[];
     for(const idx of changed){
-      const s=Math.max(0,idx-context), e=Math.min(rows.length-1,idx+context);
+      const s=Math.max(0,idx-context);
+      const e=Math.min(rows.length-1,idx+context);
       const last=ranges[ranges.length-1];
+
       if(last && s<=last.end+1) last.end=Math.max(last.end,e);
       else ranges.push({start:s,end:e});
     }
@@ -306,29 +516,32 @@ tr.hunk td{background:var(--hunk);color:var(--hunk-fg);padding:4px 10px;border-t
     let os=null,ns=null,oc=0,nc=0;
     for(let i=s;i<=e;i++){
       const r=rows[i];
-      if(r.oldNo!=null){if(os==null)os=r.oldNo;oc++}
-      if(r.newNo!=null){if(ns==null)ns=r.newNo;nc++}
+      if(r.oldNo!=null){ if(os==null) os=r.oldNo; oc++; }
+      if(r.newNo!=null){ if(ns==null) ns=r.newNo; nc++; }
     }
-    os=os??0; ns=ns??0;
-    return `@@ -${os},${oc} +${ns},${nc} @@`;
+    return `@@ -${os??0},${oc} +${ns??0},${nc} @@`;
   }
 
   function renderUnified(rows){
-    const hs=hunks(rows,3);
-    let html='<table>';
+    const context=parseInt($('#contextLines').value,10);
+    const hs=makeHunks(rows,context);
+    let html='<table id="diffTable">', changeId=0;
+
     for(const h of hs){
       html+=`<tr class="hunk"><td colspan="3">${esc(hunkLabel(rows,h.start,h.end))}</td></tr>`;
+
       for(let i=h.start;i<=h.end;i++){
         const r=rows[i];
         if(r.t==='ctx'){
           html+=`<tr class="ctx"><td class="ln">${r.oldNo}</td><td class="sign"> </td><td class="code">${esc(r.old)}</td></tr>`;
         }else if(r.t==='del'){
-          html+=`<tr class="del"><td class="ln">${r.oldNo}</td><td class="sign">−</td><td class="code">${r.old}</td></tr>`;
+          html+=`<tr class="del change-anchor" data-change="${changeId++}"><td class="ln">${r.oldNo}</td><td class="sign">−</td><td class="code">${r.old}</td></tr>`;
         }else if(r.t==='add'){
-          html+=`<tr class="add"><td class="ln">${r.newNo}</td><td class="sign">+</td><td class="code">${r.neu}</td></tr>`;
+          html+=`<tr class="add change-anchor" data-change="${changeId++}"><td class="ln">${r.newNo}</td><td class="sign">+</td><td class="code">${r.neu}</td></tr>`;
         }else{
-          html+=`<tr class="del"><td class="ln">${r.oldNo}</td><td class="sign">−</td><td class="code">${r.old}</td></tr>`;
-          html+=`<tr class="add"><td class="ln">${r.newNo}</td><td class="sign">+</td><td class="code">${r.neu}</td></tr>`;
+          const id=changeId++;
+          html+=`<tr class="del change-anchor" data-change="${id}"><td class="ln">${r.oldNo}</td><td class="sign">−</td><td class="code">${r.old}</td></tr>`;
+          html+=`<tr class="add" data-change="${id}"><td class="ln">${r.newNo}</td><td class="sign">+</td><td class="code">${r.neu}</td></tr>`;
         }
       }
     }
@@ -337,20 +550,27 @@ tr.hunk td{background:var(--hunk);color:var(--hunk-fg);padding:4px 10px;border-t
   }
 
   function renderSplit(rows){
-    const hs=hunks(rows,3);
-    let html='<div class="side">';
+    const context=parseInt($('#contextLines').value,10);
+    const hs=makeHunks(rows,context);
+    let html='<div class="side" id="splitGrid">',changeId=0;
+
     for(const h of hs){
       html+=`<div class="hunkbar">${esc(hunkLabel(rows,h.start,h.end))}</div>`;
+
       for(let i=h.start;i<=h.end;i++){
         const r=rows[i];
+
         if(r.t==='ctx'){
-          html+=`<div class="ln">${r.oldNo}</div><div class="sign"> </div><div class="cell leftcode ctxbg">${esc(r.old)}</div><div class="ln">${r.newNo}</div><div class="sign"> </div><div class="cell ctxbg">${esc(r.neu)}</div>`;
+          html+=`<div class="ln">${r.oldNo}</div><div class="sign"> </div><div class="cell leftcode">${esc(r.old)}</div><div class="ln">${r.newNo}</div><div class="sign"> </div><div class="cell">${esc(r.neu)}</div>`;
         }else if(r.t==='del'){
-          html+=`<div class="ln delbg">${r.oldNo}</div><div class="sign delbg">−</div><div class="cell leftcode delbg">${r.old}</div><div class="ln"></div><div class="sign"></div><div class="cell"></div>`;
+          const id=changeId++;
+          html+=`<div class="ln delbg change-anchor" data-change="${id}">${r.oldNo}</div><div class="sign delbg">−</div><div class="cell leftcode delbg">${r.old}</div><div class="ln"></div><div class="sign"></div><div class="cell"></div>`;
         }else if(r.t==='add'){
-          html+=`<div class="ln"></div><div class="sign"></div><div class="cell leftcode"></div><div class="ln addbg">${r.newNo}</div><div class="sign addbg">+</div><div class="cell addbg">${r.neu}</div>`;
+          const id=changeId++;
+          html+=`<div class="ln change-anchor" data-change="${id}"></div><div class="sign"></div><div class="cell leftcode"></div><div class="ln addbg">${r.newNo}</div><div class="sign addbg">+</div><div class="cell addbg">${r.neu}</div>`;
         }else{
-          html+=`<div class="ln delbg">${r.oldNo}</div><div class="sign delbg">−</div><div class="cell leftcode delbg">${r.old}</div><div class="ln addbg">${r.newNo}</div><div class="sign addbg">+</div><div class="cell addbg">${r.neu}</div>`;
+          const id=changeId++;
+          html+=`<div class="ln delbg change-anchor" data-change="${id}">${r.oldNo}</div><div class="sign delbg">−</div><div class="cell leftcode delbg">${r.old}</div><div class="ln addbg">${r.newNo}</div><div class="sign addbg">+</div><div class="cell addbg">${r.neu}</div>`;
         }
       }
     }
@@ -358,37 +578,224 @@ tr.hunk td{background:var(--hunk);color:var(--hunk-fg);padding:4px 10px;border-t
     return html;
   }
 
-  function compare(){
-    const aa=lines(A.value), bb=lines(B.value);
-    const ops=myers(aa,bb,key);
-    const rows=buildRows(ops);
-    const adds=ops.filter(x=>x.t==='add').length;
-    const dels=ops.filter(x=>x.t==='del').length;
-    STATS.textContent=`旧版 ${aa.length} 行 · 新版 ${bb.length} 行 · +${adds} / −${dels}`;
-    OUT.innerHTML = $('#view').value==='split' ? renderSplit(rows) : renderUnified(rows);
+  function refreshWrap(){
+    const wrap=$('#wrapLines').checked;
+    const table=$('#diffTable');
+    const grid=$('#splitGrid');
+    if(table) table.classList.toggle('nowrap',!wrap);
+    if(grid) grid.classList.toggle('nowrap',!wrap);
   }
 
-  $('#compare').addEventListener('click',compare);
-  $('#view').addEventListener('change',()=>{if(A.value||B.value) compare()});
-  $('#ignorews').addEventListener('change',()=>{if(A.value||B.value) compare()});
-  $('#swap').addEventListener('click',()=>{const t=A.value;A.value=B.value;B.value=t;count(A,'#lc');count(B,'#rc')});
-  $('#clear').addEventListener('click',()=>{A.value='';B.value='';count(A,'#lc');count(B,'#rc');STATS.textContent='尚未比较';OUT.innerHTML='<div class="empty">粘贴两版文字后点“比较”。</div>'});
-  $('#example').addEventListener('click',()=>{
-    A.value=`第一段：今天下午我们在实验室完成了第一次测试。
-第二段：参与者一共有三十人，其中十八人为本科生。
-第三段：实验结果显示，该方法显著提高了准确率。
-第四段：这一段完全没有修改。
-第五段：最后，我们讨论了研究的局限性。`;
-    B.value=`第一段：今天下午我们在实验室完成了第一次正式测试。
-第二段：参与者一共有四十五人，其中二十八人为本科生。
-这里新增了一整行。
-第三段：实验结果表明，该方法小幅提高了准确率。
-第四段：这一段完全没有修改。
-第五段：最后，我们详细讨论了研究的局限性。`;
-    count(A,'#lc');count(B,'#rc');compare();
+  function collectChanges(){
+    state.changes=[...diffOut.querySelectorAll('.change-anchor')];
+    state.currentChange=-1;
+    updateChangeStatus();
+  }
+
+  function updateChangeStatus(){
+    const total=state.changes.length;
+    $('#miniStatus').textContent = total ? `${state.currentChange+1} / ${total}` : '0 / 0';
+    $('#prevBtn').disabled=!total;
+    $('#nextBtn').disabled=!total;
+  }
+
+  function goChange(delta){
+    if(!state.changes.length) return;
+
+    state.changes.forEach(el=>el.classList.remove('current-change'));
+    if(state.currentChange<0) state.currentChange = delta>0 ? 0 : state.changes.length-1;
+    else state.currentChange=(state.currentChange+delta+state.changes.length)%state.changes.length;
+
+    const el=state.changes[state.currentChange];
+    el.classList.add('current-change');
+
+    // In Split view the anchor may be only the first grid cell; scrolling its block is enough.
+    el.scrollIntoView({block:'center',behavior:'smooth'});
+    updateChangeStatus();
+  }
+
+  function compare(){
+    const a=getUnits(leftText.value);
+    const b=getUnits(rightText.value);
+
+    const ops=myers(a,b,key);
+    state.rows=buildRows(ops);
+
+    const adds=ops.filter(x=>x.t==='add').length;
+    const dels=ops.filter(x=>x.t==='del').length;
+    const changedRows=state.rows.filter(x=>x.t!=='ctx').length;
+
+    stats.textContent=`旧版 ${a.length} · 新版 ${b.length} · +${adds} / −${dels} · ${changedRows} 处变化`;
+
+    diffOut.innerHTML = $('#viewMode').value==='split'
+      ? renderSplit(state.rows)
+      : renderUnified(state.rows);
+
+    refreshWrap();
+    collectChanges();
+
+    safeSet('td_view',$('#viewMode').value);
+    safeSet('td_unit',$('#unitMode').value);
+    safeSet('td_context',$('#contextLines').value);
+    safeSet('td_ignoreWs',$('#ignoreWs').checked?'1':'0');
+    safeSet('td_wrap',$('#wrapLines').checked?'1':'0');
+  }
+
+  function rerender(){
+    if(!state.rows.length && !leftText.value && !rightText.value) return;
+    compare();
+  }
+
+  // Drag splitters with Pointer Events: works for mouse, Pencil, and touch.
+  function setupVerticalSplitter(){
+    const split=$('#vSplit');
+    let dragging=false;
+
+    split.addEventListener('pointerdown',e=>{
+      dragging=true;
+      split.classList.add('dragging');
+      split.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    split.addEventListener('pointermove',e=>{
+      if(!dragging) return;
+      const rect=editors.getBoundingClientRect();
+      const pct=((e.clientX-rect.left)/rect.width)*100;
+      state.leftPct=clamp(pct,15,85);
+      applyLayout();
+    });
+
+    function end(){
+      if(!dragging) return;
+      dragging=false;
+      split.classList.remove('dragging');
+      saveLayout();
+    }
+    split.addEventListener('pointerup',end);
+    split.addEventListener('pointercancel',end);
+
+    split.addEventListener('keydown',e=>{
+      if(e.key==='ArrowLeft' || e.key==='ArrowRight'){
+        state.leftPct=clamp(state.leftPct+(e.key==='ArrowRight'?2:-2),15,85);
+        applyLayout(); saveLayout(); e.preventDefault();
+      }
+    });
+  }
+
+  function setupHorizontalSplitter(){
+    const split=$('#hSplit');
+    let dragging=false;
+
+    split.addEventListener('pointerdown',e=>{
+      dragging=true;
+      split.classList.add('dragging');
+      split.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    split.addEventListener('pointermove',e=>{
+      if(!dragging) return;
+      const rect=workspace.getBoundingClientRect();
+      const pct=((e.clientY-rect.top)/rect.height)*100;
+      state.editorPct=clamp(pct,12,82);
+      applyLayout();
+    });
+
+    function end(){
+      if(!dragging) return;
+      dragging=false;
+      split.classList.remove('dragging');
+      saveLayout();
+    }
+    split.addEventListener('pointerup',end);
+    split.addEventListener('pointercancel',end);
+
+    split.addEventListener('keydown',e=>{
+      if(e.key==='ArrowUp' || e.key==='ArrowDown'){
+        state.editorPct=clamp(state.editorPct+(e.key==='ArrowDown'?2:-2),12,82);
+        applyLayout(); saveLayout(); e.preventDefault();
+      }
+    });
+  }
+
+  $('#compareBtn').addEventListener('click',compare);
+
+  $('#swapBtn').addEventListener('click',()=>{
+    const t=leftText.value;
+    leftText.value=rightText.value;
+    rightText.value=t;
+    updateCounts();
+    if(state.rows.length) compare();
   });
 
-  count(A,'#lc');count(B,'#rc');
+  $('#diffOnlyBtn').addEventListener('click',()=>{
+    state.diffOnly=!state.diffOnly;
+    workspace.classList.toggle('diff-only',state.diffOnly);
+    $('#diffOnlyBtn').classList.toggle('active',state.diffOnly);
+    $('#diffOnlyBtn').textContent=state.diffOnly?'显示编辑区':'只看 Diff';
+  });
+
+  $('#prevBtn').addEventListener('click',()=>goChange(-1));
+  $('#nextBtn').addEventListener('click',()=>goChange(1));
+
+  $('#viewMode').addEventListener('change',rerender);
+  $('#unitMode').addEventListener('change',rerender);
+  $('#contextLines').addEventListener('change',rerender);
+  $('#ignoreWs').addEventListener('change',rerender);
+  $('#wrapLines').addEventListener('change',()=>{
+    safeSet('td_wrap',$('#wrapLines').checked?'1':'0');
+    refreshWrap();
+  });
+
+  $('#fontMinus').addEventListener('click',()=>{
+    state.fontSize=clamp(state.fontSize-1,10,22);
+    applyLayout(); saveLayout();
+  });
+
+  $('#fontPlus').addEventListener('click',()=>{
+    state.fontSize=clamp(state.fontSize+1,10,22);
+    applyLayout(); saveLayout();
+  });
+
+  $('#resetLayout').addEventListener('click',()=>{
+    state.editorPct=36;
+    state.leftPct=50;
+    state.fontSize=13;
+    state.diffOnly=false;
+    workspace.classList.remove('diff-only');
+    $('#diffOnlyBtn').classList.remove('active');
+    $('#diffOnlyBtn').textContent='只看 Diff';
+    applyLayout(); saveLayout();
+  });
+
+  $('#clearBtn').addEventListener('click',()=>{
+    leftText.value='';
+    rightText.value='';
+    state.rows=[];
+    state.changes=[];
+    state.currentChange=-1;
+    updateCounts();
+    stats.textContent='尚未比较';
+    diffOut.innerHTML='<div class="empty">粘贴两版文字后点“比较”。</div>';
+    updateChangeStatus();
+  });
+
+  // Keyboard shortcuts only when not actively typing in a textarea/select.
+  document.addEventListener('keydown',e=>{
+    const tag=(e.target.tagName||'').toLowerCase();
+    const editing=tag==='textarea' || tag==='input' || tag==='select';
+    if(editing) return;
+
+    if(e.key==='j' || e.key==='J'){ goChange(1); e.preventDefault(); }
+    if(e.key==='k' || e.key==='K'){ goChange(-1); e.preventDefault(); }
+  });
+
+  setupVerticalSplitter();
+  setupHorizontalSplitter();
+  loadPrefs();
+  updateCounts();
+  updateChangeStatus();
 })();
 </script>
 </body>
